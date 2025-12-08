@@ -1,0 +1,5 @@
+{
+  "name": "NeuroFlow: RNN Visualizer",
+  "description": "An interactive, visual exploration of UGRNN, GRU, and LSTM architectures, demonstrating information flow and gating mechanisms.",
+  "requestFramePermissions": []
+}
