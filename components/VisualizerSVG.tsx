@@ -275,46 +275,82 @@ const UGRNNDiagram: React.FC<{
 
       {/* === INTERPOLATION LOGIC === */}
 
-      {/* Path A: u * h_{t-1} */}
-      <Line d={`M ${gateX} ${sigmaY - 25} L ${gateX} ${topY + 15} L ${multX - 15} ${topY}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
+      {/* Path A: Update gate (σ) to Keep multiplier */}
+      {/* UP from sigma, then RIGHT, then UP into Keep */}
+      <Line 
+        d={`M ${gateX} ${sigmaY - 25} L ${gateX} ${topY + 60} L ${multX} ${topY + 60} L ${multX} ${topY + 15}`} 
+        type="control" 
+        isActive={steps.interp === 'active' || steps.interp === 'done'} 
+      />
+
+      {/* Keep multiplier (h * u) */}
       <Node x={multX} y={topY} type="×" label="Keep" state={steps.interp} 
         value={steps.interp === 'done' ? result.gate1.map((u, i) => u * params.hiddenH[i]) : undefined}
         onClick={() => computeStep('interp')} small />
 
-      {/* Path B: (1-u) * s */}
-      <Line d={`M ${gateX} ${sigmaY - 25} L ${oneMinusX} ${sigmaY - 25}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
-      <Node x={oneMinusX} y={sigmaY - 25} type="1-" state={steps.gates === 'done' ? 'active' : 'pending'} small />
+      {/* Path B: Update gate to (1-) scaler - HORIZONTAL */}
+      <Line 
+        d={`M ${gateX + 25} ${sigmaY} L ${oneMinusX - 15} ${sigmaY}`} 
+        type="control" 
+        isActive={steps.interp === 'active' || steps.interp === 'done'} 
+      />
 
-      {/* (1-u) goes to bottom mult node */}
-      <Line d={`M ${oneMinusX + 15} ${sigmaY - 25} L ${multX} ${sigmaY - 25} L ${multX} ${bottomY - 25}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
+      {/* (1-u) scaler - moved down to align with sigma */}
+      <Node x={oneMinusX} y={sigmaY} type="1-" state={steps.gates === 'done' ? 'active' : 'pending'} small />
 
-      {/* s output goes to bottom mult node */}
-      <Line d={`M ${gateX + 25} ${bottomY} L ${multX - 20} ${bottomY}`} type="data" isActive={steps.interp === 'active' || steps.interp === 'done'} />
+      {/* (1-u) output to Add New multiplier - vertical then horizontal */}
+      <Line 
+        d={`M ${oneMinusX + 15} ${sigmaY} L ${multX} ${sigmaY} L ${multX} ${bottomY - 15}`} 
+        type="control" 
+        isActive={steps.interp === 'active' || steps.interp === 'done'} 
+      />
+
+      {/* Candidate (s) to Add New multiplier */}
+      <Line 
+        d={`M ${gateX + 25} ${bottomY} L ${multX - 15} ${bottomY}`} 
+        type="data" 
+        isActive={steps.interp === 'active' || steps.interp === 'done'} 
+      />
+
+      {/* Add New multiplier (s * (1-u)) */}
       <Node x={multX} y={bottomY} type="×" label="Add New" state={steps.interp}
         value={steps.interp === 'done' ? result.gate1.map((u, i) => (1-u) * result.candidateState[i]) : undefined}
         onClick={() => computeStep('interp')} small />
 
-      {/* === FINAL SUM (+) === */}
-      <Line d={`M ${multX + 20} ${topY} L ${addX} ${topY} L ${addX} ${250 - 20}`} type="data" isActive={steps.add === 'active' || steps.add === 'done'} />
-      <Line d={`M ${multX + 20} ${bottomY} L ${addX} ${bottomY} L ${addX} ${250 + 20}`} type="data" isActive={steps.add === 'active' || steps.add === 'done'} />
+      {/* === FINAL BLEND (+) === */}
 
+      {/* Keep output: RIGHT then DOWN into Blend LEFT side */}
+      <Line 
+        d={`M ${multX + 15} ${topY} L ${addX - 40} ${topY} L ${addX - 40} ${250} L ${addX - 20} ${250}`} 
+        type="data" 
+        isActive={steps.add === 'active' || steps.add === 'done'} 
+      />
+
+      {/* Add New output: RIGHT then DOWN into Blend BOTTOM */}
+      <Line 
+        d={`M ${multX + 15} ${bottomY} L ${addX} ${bottomY} L ${addX} ${250 + 20}`} 
+        type="data" 
+        isActive={steps.add === 'active' || steps.add === 'done'} 
+      />
+
+      {/* Blend node */}
       <Node x={addX} y={250} type="+" label="Blend" state={steps.add}
         value={steps.add === 'done' ? result.finalH : undefined} onClick={() => computeStep('add')} />
 
-      {/* === OUTPUT: h_t and y_t === */}
+      {/* === HORIZONTAL OUTPUT: h_t (Blue/Data) === */}
       <Line d={`M ${addX + 20} 250 L ${rightX} 250`} type="data" isActive={steps.add === 'done'} />
       <IOLabel x={rightX + 10} y={250} label="h" subscript="t" value={steps.add === 'done' ? result.finalH : undefined} align="start" isInput={false} />
 
-      {/* y_t = h_t (vertical branch up) */}
+      {/* === y_t OUTPUT (UP then RIGHT) === */}
       <Line 
-        d={`M ${addX} 250 L ${addX} 80 L ${rightX} 80`} 
+        d={`M ${addX + 20} ${250} L ${rightX} ${250}`} 
         type="data" 
         isActive={steps.add === 'done'} 
       />
       <IOLabel 
         x={rightX + 10} 
-        y={80} 
-        label="y" 
+        y={250} 
+        label="h" 
         subscript="t" 
         value={steps.add === 'done' ? result.finalH : undefined} 
         align="start" 
@@ -365,21 +401,23 @@ const GRUDiagram: React.FC<{
   // Layout Constants
   const W = 1250, H = 560;
 
-  // Vertical Levels
-  const topY = 120;     // h_{t-1} highway
-  const gateY = 220;    // Reset/Update gates
-  const candY = 320;    // Candidate calc
-  const bottomY = 450;  // Input x_t / Bus
+  // Vertical Levels - FINE-TUNED
+  const topY = 160;       // h_{t-1} highway
+  const oneMinusY = 240;  // (1-) scaler - MOVED DOWN
+  const resetMultY = 220; // Reset multiplier
+  const gateY = 300;      // Reset/Update gates
+  const candY = 380;      // Candidate calc
+  const bottomY = 435;    // Merge - MOVED UP more
 
   // Horizontal Columns
-  const leftX = 150;    // Increased to show h_{t-1} value box
+  const leftX = 150;
   const concatX = 250;
-  const resetGateX = 340;
-  const updateGateX = 520;
-  const resetMultX = 340; // Aligned with reset gate
-  const candX = 680;
-  const interpX = 840;
-  const addX = 960;
+  const resetGateX = 380;
+  const updateGateX = 560;
+  const resetMultX = 720; // MOVED RIGHT - above tanh
+  const candX = 720;      // Aligned with reset mult
+  const interpX = 880;
+  const addX = 1000;
   const rightX = 1100;
 
   const concatVal = params.inputX.map((v, i) => v + (params.hiddenH[i] || 0));
@@ -389,23 +427,22 @@ const GRUDiagram: React.FC<{
       <Styles />
       <rect width={W} height={H} fill={COLORS.canvasBg} />
 
-      <rect x={140} y={60} width={1000} height={420} rx={16}
+      <rect x={140} y={80} width={1000} height={380} rx={16}
         fill="rgba(30,41,59,0.3)" stroke="#334155" strokeWidth={2} />
 
       {/* === I/O LABELS === */}
-      {/* h_{t-1} label with enough left space */}
       <IOLabel x={leftX - 10} y={topY} label="h" subscript="t-1" value={params.hiddenH} align="end" isInput={true} />
-      <IOLabel x={concatX} y={500} label="x" subscript="t" value={params.inputX} align="middle" isInput={true} />
+      <IOLabel x={concatX} y={bottomY + 70} label="x" subscript="t" value={params.inputX} align="middle" isInput={true} />
 
       {/* === INPUTS === */}
       {/* x_t line */}
-      <Line d={`M ${concatX} 490 L ${concatX} ${bottomY}`} type="data" isActive={steps.concat === 'active'} />
+      <Line d={`M ${concatX} ${bottomY + 30} L ${concatX} ${bottomY + 20}`} type="data" isActive={steps.concat === 'active'} />
 
-      {/* h_{t-1} line (Top Highway) - stops at interp mult node */}
-      <Line d={`M ${leftX} ${topY} L ${interpX - 15} ${topY}`} type="data" isActive={true} />
+      {/* h_{t-1} line (Top Highway) - BLUE when active */}
+      <Line d={`M ${leftX} ${topY} L ${interpX - 15} ${topY}`} type="data" isActive={steps.concat === 'active' || steps.concat === 'done'} />
 
-      {/* Drawing h_{t-1} dropping to concat */}
-      <Line d={`M ${concatX} ${topY} L ${concatX} ${bottomY}`} type="data" isActive={steps.concat === 'active'} />
+      {/* h_{t-1} dropping to concat */}
+      <Line d={`M ${concatX} ${topY} L ${concatX} ${bottomY - 20}`} type="data" isActive={steps.concat === 'active'} />
 
       {/* Merge Node */}
       <Node x={concatX} y={bottomY} type="+" label="Merge" state={steps.concat}
@@ -425,52 +462,58 @@ const GRUDiagram: React.FC<{
 
       {/* === RESET LOGIC === */}
       {/* h_{t-1} branch to reset mult */}
-      <Line d={`M ${resetMultX} ${topY} L ${resetMultX} ${gateY - 75}`} type="data" isActive={steps.gates === 'done'} />
+      <Line d={`M ${resetMultX} ${topY} L ${resetMultX} ${resetMultY - 15}`} type="data" isActive={steps.resetMult === 'active' || steps.resetMult === 'done'} />
 
-      {/* r output goes to mult (bottom of node) */}
-      <Line d={`M ${resetGateX} ${gateY - 25} L ${resetGateX} ${gateY - 45}`} type="control" isActive={steps.resetMult === 'active' || steps.resetMult === 'done'} />
+      {/* r output goes UP then RIGHT to mult */}
+      <Line d={`M ${resetGateX} ${gateY - 25} L ${resetGateX} ${resetMultY} L ${resetMultX - 15} ${resetMultY}`} type="control" isActive={steps.resetMult === 'active' || steps.resetMult === 'done'} />
 
-      <Node x={resetGateX} y={gateY - 60} type="×" label="Reset" state={steps.resetMult} onClick={() => computeStep('resetMult')} small />
+      <Node x={resetMultX} y={resetMultY} type="×" label="Reset" state={steps.resetMult} 
+        value={steps.resetMult === 'done' ? result.gate1.map((r, i) => r * params.hiddenH[i]) : undefined}
+        onClick={() => computeStep('resetMult')} small />
 
       {/* === CANDIDATE === */}
       {/* x_t flows from bottom bus to Candidate */}
-      <Line d={`M ${updateGateX} ${bottomY} L ${candX} ${bottomY} L ${candX} ${candY + 25}`} type="data" isActive={steps.resetMult === 'done'} />
+      <Line d={`M ${updateGateX} ${bottomY} L ${candX} ${bottomY} L ${candX} ${candY + 25}`} type="data" isActive={steps.candidate === 'active' || steps.candidate === 'done'} />
 
-      {/* r*h flows to Candidate (top of node) */}
-      <Line d={`M ${resetGateX + 15} ${gateY - 60} L ${candX} ${gateY - 60} L ${candX} ${candY - 25}`} type="data" isActive={steps.resetMult === 'done'} />
+      {/* r*h flows to Candidate (bottom of Reset mult, then down) */}
+      <Line d={`M ${resetMultX} ${resetMultY + 15} L ${resetMultX} ${candY - 60} L ${candX} ${candY - 60} L ${candX} ${candY - 25}`} type="data" isActive={steps.candidate === 'active' || steps.candidate === 'done'} />
 
       <Node x={candX} y={candY} type="tanh" label="Cand (ñ)" state={steps.candidate}
         value={steps.candidate === 'done' ? result.candidateState : undefined} onClick={() => computeStep('candidate')} />
 
-      {/* === INTERPOLATION (Update Gate) === */}
-      {/* z goes up to (1-) node - stops at bottom */}
-      <Line d={`M ${updateGateX} ${gateY - 25} L ${updateGateX} ${topY + 65}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
-      <Node x={updateGateX} y={topY + 50} type="1-" state={steps.gates === 'done' ? 'active' : 'pending'} small />
+    {/* === INTERPOLATION (Update Gate) === */}
+    {/* z goes up to (1-) node */}
+    <Line d={`M ${updateGateX} ${gateY - 25} L ${updateGateX} ${oneMinusY + 15}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
+    <Node x={updateGateX} y={oneMinusY} type="1-" state={steps.gates === 'done' ? 'active' : 'pending'} small />
 
-      {/* (1-z) goes to Top Mult (h_{t-1}) - stops at bottom */}
-      <Line d={`M ${updateGateX + 15} ${topY + 50} L ${interpX} ${topY + 50} L ${interpX} ${topY + 15}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
-      <Node x={interpX} y={topY} type="×" label="Keep" state={steps.interp} onClick={() => computeStep('interp')} small />
+    {/* (1-z) goes to Top Mult (h_{t-1}) */}
+    <Line d={`M ${updateGateX + 15} ${oneMinusY} L ${interpX} ${oneMinusY} L ${interpX} ${topY + 15}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
+      <Node x={interpX} y={topY} type="×" label="Keep" state={steps.interp} 
+        value={steps.interp === 'done' ? result.gate2.map((z, i) => (1-z) * params.hiddenH[i]) : undefined}
+        onClick={() => computeStep('interp')} small />
 
-      {/* Direct z to Bottom Mult (Candidate) - stops at top */}
-      <Line d={`M ${updateGateX + 20} ${gateY} L ${interpX} ${gateY} L ${interpX} ${candY - 15}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
+      {/* Direct z to Bottom Mult (Candidate) */}
+      <Line d={`M ${updateGateX + 25} ${gateY} L ${interpX} ${gateY} L ${interpX} ${candY - 15}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
 
-      {/* Candidate output to Bottom Mult - stops at left */}
+      {/* Candidate output to Bottom Mult */}
       <Line d={`M ${candX + 25} ${candY} L ${interpX - 15} ${candY}`} type="data" isActive={steps.interp === 'active' || steps.interp === 'done'} />
-      <Node x={interpX} y={candY} type="×" label="Update" state={steps.interp} onClick={() => computeStep('interp')} small />
+      <Node x={interpX} y={candY} type="×" label="Update" state={steps.interp} 
+        value={steps.interp === 'done' ? result.gate2.map((z, i) => z * result.candidateState[i]) : undefined}
+        onClick={() => computeStep('interp')} small />
 
       {/* === FINAL ADD === */}
-      {/* Join Top and Bottom Mults */}
-      <Line d={`M ${interpX + 15} ${topY} L ${addX} ${topY} L ${addX} ${gateY - 20}`} type="data" isActive={steps.add === 'active' || steps.add === 'done'} />
+      {/* Join Top and Bottom Mults - Keep goes RIGHT then DOWN then enters Blend from LEFT */}
+      <Line d={`M ${interpX + 15} ${topY} L ${addX - 60} ${topY} L ${addX - 60} ${gateY} L ${addX - 20} ${gateY}`} type="data" isActive={steps.add === 'active' || steps.add === 'done'} />
       <Line d={`M ${interpX + 15} ${candY} L ${addX} ${candY} L ${addX} ${gateY + 20}`} type="data" isActive={steps.add === 'active' || steps.add === 'done'} />
 
       <Node x={addX} y={gateY} type="+" label="Blend" state={steps.add}
         value={steps.add === 'done' ? result.finalH : undefined} onClick={() => computeStep('add')} />
 
-      {/* === OUTPUT h_t and y_t === */}
+      {/* Output */}
       <Line d={`M ${addX + 20} ${gateY} L ${rightX} ${gateY}`} type="data" isActive={steps.add === 'done'} />
       <IOLabel x={rightX + 10} y={gateY} label="h" subscript="t" value={steps.add === 'done' ? result.finalH : undefined} align="start" isInput={false} />
 
-      {/* y_t = h_t (vertical branch up) */}
+      {/* === Y_T OUTPUT (VERTICAL) === */}
       <Line 
         d={`M ${addX} ${gateY} L ${addX} 50`} 
         type="data" 
