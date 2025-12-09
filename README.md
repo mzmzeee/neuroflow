@@ -4,7 +4,7 @@ A specialized educational tool for visualizing the internal arithmetic of Recurr
 
 ## Getting Started
 ## 🌐 Try it Live
-**[Launch Interactive Demo →](https://your-app.vercel.app)**
+**[Launch Interactive Demo →](https://neurofloww.vercel.app/)**
 
 No installation needed - runs directly in your browser!
 ### Prerequisites
