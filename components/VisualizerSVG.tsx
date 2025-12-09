@@ -341,19 +341,19 @@ const UGRNNDiagram: React.FC<{
       <Line d={`M ${addX + 20} 250 L ${rightX} 250`} type="data" isActive={steps.add === 'done'} />
       <IOLabel x={rightX + 10} y={250} label="h" subscript="t" value={steps.add === 'done' ? result.finalH : undefined} align="start" isInput={false} />
 
-      {/* === y_t OUTPUT (UP then RIGHT) === */}
+      {/* === y_t OUTPUT (VERTICAL) === */}
       <Line 
-        d={`M ${addX + 20} ${250} L ${rightX} ${250}`} 
+        d={`M ${addX} ${250 - 20} L ${addX} 50`} 
         type="data" 
         isActive={steps.add === 'done'} 
       />
       <IOLabel 
-        x={rightX + 10} 
-        y={250} 
-        label="h" 
+        x={addX} 
+        y={30} 
+        label="y" 
         subscript="t" 
         value={steps.add === 'done' ? result.finalH : undefined} 
-        align="start" 
+        align="middle" 
         isInput={false} 
       />
 
@@ -629,41 +629,41 @@ const LSTMDiagram: React.FC<{
       {/* === FOUR HEADS (Vertical Taps) === */}
 
       {/* 1. Forget Gate */}
-      <Line d={`M ${forgetX} ${busY} L ${forgetX} ${gateY + 25}`} type="data" isActive={steps.gates === 'active' || steps.gates === 'done'} />
+      <Line d={`M ${forgetX} ${busY} L ${forgetX} ${gateY + 27}`} type="data" isActive={steps.gates === 'active' || steps.gates === 'done'} />
       <Node x={forgetX} y={gateY} type="σ" label="Forget (f)" state={steps.gates}
         value={steps.gates === 'done' ? result.gate1 : undefined} onClick={() => computeStep('gates')} />
 
       {/* 2. Input Gate */}
-      <Line d={`M ${inputX} ${busY} L ${inputX} ${gateY + 25}`} type="data" isActive={steps.gates === 'active' || steps.gates === 'done'} />
+      <Line d={`M ${inputX} ${busY} L ${inputX} ${gateY + 27}`} type="data" isActive={steps.gates === 'active' || steps.gates === 'done'} />
       <Node x={inputX} y={gateY} type="σ" label="Input (i)" state={steps.gates}
         value={steps.gates === 'done' ? result.gate2 : undefined} onClick={() => computeStep('gates')} />
 
       {/* 3. Candidate */}
-      <Line d={`M ${candX} ${busY} L ${candX} ${gateY + 25}`} type="data" isActive={steps.gates === 'active' || steps.gates === 'done'} />
+      <Line d={`M ${candX} ${busY} L ${candX} ${gateY + 27}`} type="data" isActive={steps.gates === 'active' || steps.gates === 'done'} />
       <Node x={candX} y={gateY} type="tanh" label="Cand (C̃)" state={steps.gates}
         value={steps.gates === 'done' ? result.candidateState : undefined} onClick={() => computeStep('gates')} />
 
       {/* 4. Output Gate */}
-      <Line d={`M ${outputX} ${busY} L ${outputX} ${gateY + 25}`} type="data" isActive={steps.gates === 'active' || steps.gates === 'done'} />
-      <Node x={outputX} y={gateY} type="σ" label="Output (o)" state={steps.gates}
+      <Line d={`M ${outputX} ${busY} L ${outputX} ${gateY + 47}`} type="data" isActive={steps.gates === 'active' || steps.gates === 'done'} />
+      <Node x={outputX} y={gateY + 20} type="σ" label="Output (o)" state={steps.gates}
         value={steps.gates === 'done' ? result.gate3 : undefined} onClick={() => computeStep('gates')} />
 
       {/* === CELL UPDATE LOGIC === */}
 
       {/* Forget * C_{t-1} */}
       {/* f goes up to Cell Highway */}
-      <Line d={`M ${forgetX} ${gateY - 25} L ${forgetX} ${cellY + 25} L ${fMultX} ${cellY + 25}`} type="control" isActive={steps.gating === 'active' || steps.gating === 'done'} />
+      <Line d={`M ${forgetX} ${gateY - 27} L ${forgetX} ${cellY + 15}`} type="control" isActive={steps.gating === 'active' || steps.gating === 'done'} />
       <Node x={fMultX} y={cellY} type="×" label="Forget" state={steps.gating} onClick={() => computeStep('gating')} small />
 
       {/* Input * Candidate */}
       {/* Grouping: i and C~ meet at iMultX */}
-      <Line d={`M ${inputX} ${gateY - 25} L ${inputX} ${gateMultY + 15} L ${iMultX - 15} ${gateMultY}`} type="control" isActive={steps.gating === 'active' || steps.gating === 'done'} />
-      <Line d={`M ${candX} ${gateY - 25} L ${candX} ${gateMultY + 15} L ${iMultX + 15} ${gateMultY}`} type="data" isActive={steps.gating === 'active' || steps.gating === 'done'} />
+      <Line d={`M ${inputX} ${gateY - 27} L ${inputX} ${gateMultY} L ${iMultX - 15} ${gateMultY}`} type="control" isActive={steps.gating === 'active' || steps.gating === 'done'} />
+      <Line d={`M ${candX} ${gateY - 27} L ${candX} ${gateMultY} L ${iMultX + 15} ${gateMultY}`} type="data" isActive={steps.gating === 'active' || steps.gating === 'done'} />
       <Node x={iMultX} y={gateMultY} type="×" label="New Info" state={steps.gating} onClick={() => computeStep('gating')} small />
 
       {/* Add New Info to Cell */}
-      <Line d={`M ${fMultX + 20} ${cellY} L ${addX} ${cellY}`} type="data" isActive={steps.cellUpdate === 'active' || steps.cellUpdate === 'done'} />
-      <Line d={`M ${iMultX} ${gateMultY - 25} L ${iMultX} ${cellY + 25} L ${addX} ${cellY + 25}`} type="data" isActive={steps.cellUpdate === 'active' || steps.cellUpdate === 'done'} />
+      <Line d={`M ${fMultX + 15} ${cellY} L ${addX - 20} ${cellY}`} type="data" isActive={steps.cellUpdate === 'active' || steps.cellUpdate === 'done'} />
+      <Line d={`M ${iMultX} ${gateMultY - 15} L ${iMultX} ${gateMultY - 40} L ${addX} ${gateMultY - 40} L ${addX} ${cellY + 20}`} type="data" isActive={steps.cellUpdate === 'active' || steps.cellUpdate === 'done'} />
 
       <Node x={addX} y={cellY} type="+" label="Add" state={steps.cellUpdate}
         value={steps.cellUpdate === 'done' ? result.finalC : undefined} onClick={() => computeStep('cellUpdate')} />
@@ -675,15 +675,15 @@ const LSTMDiagram: React.FC<{
       {/* === FINAL HIDDEN OUTPUT === */}
 
       {/* Drop from C_t to Tanh */}
-      <Line d={`M ${finalTanhX} ${cellY} L ${finalTanhX} ${gateMultY - 25}`} type="data" isActive={steps.outputCalc === 'active' || steps.outputCalc === 'done'} />
+      <Line d={`M ${addX + 20} ${cellY} L ${finalTanhX - 50} ${cellY} L ${finalTanhX - 50} ${gateMultY} L ${finalTanhX - 15} ${gateMultY}`} type="data" isActive={steps.outputCalc === 'active' || steps.outputCalc === 'done'} />
       <Node x={finalTanhX} y={gateMultY} type="tanh" state={steps.outputCalc}
         value={steps.outputCalc === 'done' ? result.tanhC : undefined} onClick={() => computeStep('outputCalc')} small />
 
       {/* Path from Tanh to Mult */}
-      <Line d={`M ${finalTanhX + 15} ${gateMultY} L ${finalMultX} ${gateMultY} L ${finalMultX} ${gateY - 20}`} type="data" isActive={steps.outputCalc === 'active' || steps.outputCalc === 'done'} />
+      <Line d={`M ${finalTanhX + 15} ${gateMultY} L ${finalMultX - 40} ${gateMultY} L ${finalMultX - 40} ${gateY} L ${finalMultX - 20} ${gateY}`} type="data" isActive={steps.outputCalc === 'active' || steps.outputCalc === 'done'} />
 
       {/* Path from Output Gate to Mult */}
-      <Line d={`M ${outputX + 25} ${gateY} L ${finalMultX - 20} ${gateY}`} type="control" isActive={steps.outputCalc === 'active' || steps.outputCalc === 'done'} />
+      <Line d={`M ${outputX + 27} ${gateY + 20} L ${finalMultX} ${gateY + 20} L ${finalMultX} ${gateY + 15}`} type="control" isActive={steps.outputCalc === 'active' || steps.outputCalc === 'done'} />
 
       <Node x={finalMultX} y={gateY} type="×" label="Out" state={steps.outputCalc}
         value={steps.outputCalc === 'done' ? result.finalH : undefined} onClick={() => computeStep('outputCalc')} small />
@@ -694,7 +694,7 @@ const LSTMDiagram: React.FC<{
 
       {/* y_t = h_t (vertical branch up) */}
       <Line 
-        d={`M ${finalMultX} ${gateY} L ${finalMultX} 50`} 
+        d={`M ${finalMultX} ${gateY - 20} L ${finalMultX} 50`} 
         type="data" 
         isActive={steps.outputCalc === 'done'} 
       />
