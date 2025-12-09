@@ -3,7 +3,10 @@
 A specialized educational tool for visualizing the internal arithmetic of Recurrent Neural Networks (RNNs). This project allows students to step through the computations of UGRNN, GRU, and LSTM cells interactively.
 
 ## Getting Started
+## 🌐 Try it Live
+**[Launch Interactive Demo →](https://your-app.vercel.app)**
 
+No installation needed - runs directly in your browser!
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v16 or higher) installed.
 
