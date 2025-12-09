@@ -2,7 +2,7 @@
 
 A specialized educational tool for visualizing the internal arithmetic of Recurrent Neural Networks (RNNs). This project allows students to step through the computations of UGRNN, GRU, and LSTM cells interactively.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v16 or higher) installed.
@@ -25,7 +25,7 @@ npm run dev
 Open your browser to:
 `http://localhost:3000`
 
-## 🧠 Interactive Modes
+##  Interactive Modes
 
 The application supports three common RNN architectures:
 

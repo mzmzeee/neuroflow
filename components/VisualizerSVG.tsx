@@ -245,7 +245,7 @@ const UGRNNDiagram: React.FC<{
       <IOLabel x={rightX + 10} y={250} label="h" subscript="t" value={steps.add === 'done' ? result.finalH : undefined} align="start" isInput={false} />
 
       {/* === TOP HIGHWAY (h_{t-1}) === */}
-      <Line d={`M ${leftX} ${topY} L ${multX} ${topY}`} type="data" isActive={true} />
+      <Line d={`M ${leftX} ${topY} L ${multX - 15} ${topY}`} type="data" isActive={true} />
 
       {/* Branch h_{t-1} down to merge node */}
       <Line d={`M ${concatX} ${topY} L ${concatX} ${bottomY - 20}`} type="data" isActive={steps.concat === 'active'} />
@@ -277,8 +277,10 @@ const UGRNNDiagram: React.FC<{
       {/* === INTERPOLATION LOGIC === */}
 
       {/* Path A: u * h_{t-1} */}
-      <Line d={`M ${gateX} ${sigmaY - 25} L ${gateX} ${topY + 25} L ${multX} ${topY + 25}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
-      <Node x={multX} y={topY} type="×" label="Keep" state={steps.interp} onClick={() => computeStep('interp')} small />
+      <Line d={`M ${gateX} ${sigmaY - 25} L ${gateX} ${topY + 15} L ${multX - 15} ${topY}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
+      <Node x={multX} y={topY} type="×" label="Keep" state={steps.interp} 
+        value={steps.interp === 'done' ? result.gate1.map((u, i) => u * params.hiddenH[i]) : undefined}
+        onClick={() => computeStep('interp')} small />
 
       {/* Path B: (1-u) * s */}
       <Line d={`M ${gateX} ${sigmaY - 25} L ${oneMinusX} ${sigmaY - 25}`} type="control" isActive={steps.interp === 'active' || steps.interp === 'done'} />
@@ -289,7 +291,9 @@ const UGRNNDiagram: React.FC<{
 
       {/* s output goes to bottom mult node */}
       <Line d={`M ${gateX + 25} ${bottomY} L ${multX - 20} ${bottomY}`} type="data" isActive={steps.interp === 'active' || steps.interp === 'done'} />
-      <Node x={multX} y={bottomY} type="×" label="Add New" state={steps.interp} onClick={() => computeStep('interp')} small />
+      <Node x={multX} y={bottomY} type="×" label="Add New" state={steps.interp}
+        value={steps.interp === 'done' ? result.gate1.map((u, i) => (1-u) * result.candidateState[i]) : undefined}
+        onClick={() => computeStep('interp')} small />
 
       {/* === FINAL SUM (+) === */}
       <Line d={`M ${multX + 20} ${topY} L ${addX} ${topY} L ${addX} ${250 - 20}`} type="data" isActive={steps.add === 'active' || steps.add === 'done'} />
@@ -298,8 +302,25 @@ const UGRNNDiagram: React.FC<{
       <Node x={addX} y={250} type="+" label="Blend" state={steps.add}
         value={steps.add === 'done' ? result.finalH : undefined} onClick={() => computeStep('add')} />
 
-      {/* Output h_t */}
+      {/* === HORIZONTAL OUTPUT: h_t (Blue/Data) === */}
       <Line d={`M ${addX + 20} 250 L ${rightX} 250`} type="data" isActive={steps.add === 'done'} />
+      <IOLabel x={rightX + 10} y={250} label="h" subscript="t" value={steps.add === 'done' ? result.finalH : undefined} align="start" isInput={false} />
+
+      {/* === y_t OUTPUT (UP then RIGHT) === */}
+      <Line 
+        d={`M ${addX} 250 L ${addX} 80 L ${rightX} 80`} 
+        type="data" 
+        isActive={steps.add === 'done'} 
+      />
+      <IOLabel 
+        x={rightX + 10} 
+        y={80} 
+        label="y" 
+        subscript="t" 
+        value={steps.add === 'done' ? result.finalH : undefined} 
+        align="start" 
+        isInput={false} 
+      />
 
     </svg>
   );
@@ -343,7 +364,7 @@ const GRUDiagram: React.FC<{
   }, [onComplete]);
 
   // Layout Constants
-  const W = 1100, H = 560;
+  const W = 1250, H = 560;
 
   // Vertical Levels
   const topY = 120;     // h_{t-1} highway
@@ -354,13 +375,13 @@ const GRUDiagram: React.FC<{
   // Horizontal Columns
   const leftX = 150;    // Increased to show h_{t-1} value box
   const concatX = 250;
-  const resetGateX = 370;
-  const updateGateX = 490;
-  const resetMultX = 370; // Aligned with reset gate
-  const candX = 610;
-  const interpX = 770;
-  const addX = 890;
-  const rightX = W - 140;
+  const resetGateX = 340;
+  const updateGateX = 520;
+  const resetMultX = 340; // Aligned with reset gate
+  const candX = 680;
+  const interpX = 840;
+  const addX = 960;
+  const rightX = 1100;
 
   const concatVal = params.inputX.map((v, i) => v + (params.hiddenH[i] || 0));
 
@@ -369,7 +390,7 @@ const GRUDiagram: React.FC<{
       <Styles />
       <rect width={W} height={H} fill={COLORS.canvasBg} />
 
-      <rect x={190} y={60} width={750} height={420} rx={16}
+      <rect x={140} y={60} width={1000} height={420} rx={16}
         fill="rgba(30,41,59,0.3)" stroke="#334155" strokeWidth={2} />
 
       {/* === I/O LABELS === */}
@@ -449,6 +470,22 @@ const GRUDiagram: React.FC<{
       {/* Output */}
       <Line d={`M ${addX + 20} ${gateY} L ${rightX} ${gateY}`} type="data" isActive={steps.add === 'done'} />
       <IOLabel x={rightX + 10} y={gateY} label="h" subscript="t" value={steps.add === 'done' ? result.finalH : undefined} align="start" isInput={false} />
+
+      {/* === Y_T OUTPUT (VERTICAL) === */}
+      <Line 
+        d={`M ${addX} ${gateY} L ${addX} 50`} 
+        type="data" 
+        isActive={steps.add === 'done'} 
+      />
+      <IOLabel 
+        x={addX} 
+        y={30} 
+        label="y" 
+        subscript="t" 
+        value={steps.add === 'done' ? result.finalH : undefined} 
+        align="middle" 
+        isInput={false} 
+      />
 
     </svg>
   );
@@ -578,8 +615,8 @@ const LSTMDiagram: React.FC<{
 
       {/* Input * Candidate */}
       {/* Grouping: i and C~ meet at iMultX */}
-      <Line d={`M ${inputX} ${gateY - 25} L ${inputX} ${gateMultY} L ${iMultX - 15} ${gateMultY}`} type="control" isActive={steps.gating === 'active' || steps.gating === 'done'} />
-      <Line d={`M ${candX} ${gateY - 25} L ${candX} ${gateMultY} L ${iMultX + 15} ${gateMultY}`} type="data" isActive={steps.gating === 'active' || steps.gating === 'done'} />
+      <Line d={`M ${inputX} ${gateY - 25} L ${inputX} ${gateMultY + 15} L ${iMultX - 15} ${gateMultY}`} type="control" isActive={steps.gating === 'active' || steps.gating === 'done'} />
+      <Line d={`M ${candX} ${gateY - 25} L ${candX} ${gateMultY + 15} L ${iMultX + 15} ${gateMultY}`} type="data" isActive={steps.gating === 'active' || steps.gating === 'done'} />
       <Node x={iMultX} y={gateMultY} type="×" label="New Info" state={steps.gating} onClick={() => computeStep('gating')} small />
 
       {/* Add New Info to Cell */}
@@ -612,6 +649,22 @@ const LSTMDiagram: React.FC<{
       {/* Final h_t output */}
       <Line d={`M ${finalMultX + 20} ${gateY} L ${rightX} ${gateY}`} type="data" isActive={steps.outputCalc === 'done'} />
       <IOLabel x={rightX + 10} y={gateY} label="h" subscript="t" value={steps.outputCalc === 'done' ? result.finalH : undefined} align="start" isInput={false} />
+
+      {/* === Y_T OUTPUT (VERTICAL) === */}
+      <Line 
+        d={`M ${finalMultX} ${gateY} L ${finalMultX} 50`} 
+        type="data" 
+        isActive={steps.outputCalc === 'done'} 
+      />
+      <IOLabel 
+        x={finalMultX} 
+        y={30} 
+        label="y" 
+        subscript="t" 
+        value={steps.outputCalc === 'done' ? result.finalH : undefined} 
+        align="middle" 
+        isInput={false} 
+      />
 
     </svg>
   );
