@@ -119,9 +119,9 @@ const Node = ({
           fontStyle="italic" fill={COLORS.labelText}>{label}</text>
       )}
 
-      {/* Value below when done */}
+      {/* Value below when done - increased spacing for small nodes */}
       {state === 'done' && value && (
-        <g transform={`translate(0, ${isCircle ? 35 : 40})`}>
+        <g transform={`translate(0, ${small ? 45 : (isCircle ? 35 : 40)})`}>
           <rect x={-50} y={-10} width={100} height={20} rx={4}
             fill="rgba(2,6,23,0.95)" stroke={COLORS.nodeDone} strokeWidth={1} />
           <text x={0} y={4} textAnchor="middle" fontSize={10} fontFamily="monospace"
@@ -242,7 +242,6 @@ const UGRNNDiagram: React.FC<{
       {/* === I/O LABELS (drawn first for z-order) === */}
       <IOLabel x={leftX - 10} y={topY} label="h" subscript="t-1" value={params.hiddenH} align="end" isInput={true} />
       <IOLabel x={concatX} y={480} label="x" subscript="t" value={params.inputX} align="middle" isInput={true} />
-      <IOLabel x={rightX + 10} y={250} label="h" subscript="t" value={steps.add === 'done' ? result.finalH : undefined} align="start" isInput={false} />
 
       {/* === TOP HIGHWAY (h_{t-1}) === */}
       <Line d={`M ${leftX} ${topY} L ${multX - 15} ${topY}`} type="data" isActive={true} />
@@ -302,11 +301,11 @@ const UGRNNDiagram: React.FC<{
       <Node x={addX} y={250} type="+" label="Blend" state={steps.add}
         value={steps.add === 'done' ? result.finalH : undefined} onClick={() => computeStep('add')} />
 
-      {/* === HORIZONTAL OUTPUT: h_t (Blue/Data) === */}
+      {/* === OUTPUT: h_t and y_t === */}
       <Line d={`M ${addX + 20} 250 L ${rightX} 250`} type="data" isActive={steps.add === 'done'} />
       <IOLabel x={rightX + 10} y={250} label="h" subscript="t" value={steps.add === 'done' ? result.finalH : undefined} align="start" isInput={false} />
 
-      {/* === y_t OUTPUT (UP then RIGHT) === */}
+      {/* y_t = h_t (vertical branch up) */}
       <Line 
         d={`M ${addX} 250 L ${addX} 80 L ${rightX} 80`} 
         type="data" 
@@ -467,11 +466,11 @@ const GRUDiagram: React.FC<{
       <Node x={addX} y={gateY} type="+" label="Blend" state={steps.add}
         value={steps.add === 'done' ? result.finalH : undefined} onClick={() => computeStep('add')} />
 
-      {/* Output */}
+      {/* === OUTPUT h_t and y_t === */}
       <Line d={`M ${addX + 20} ${gateY} L ${rightX} ${gateY}`} type="data" isActive={steps.add === 'done'} />
       <IOLabel x={rightX + 10} y={gateY} label="h" subscript="t" value={steps.add === 'done' ? result.finalH : undefined} align="start" isInput={false} />
 
-      {/* === Y_T OUTPUT (VERTICAL) === */}
+      {/* y_t = h_t (vertical branch up) */}
       <Line 
         d={`M ${addX} ${gateY} L ${addX} 50`} 
         type="data" 
@@ -646,11 +645,11 @@ const LSTMDiagram: React.FC<{
       <Node x={finalMultX} y={gateY} type="×" label="Out" state={steps.outputCalc}
         value={steps.outputCalc === 'done' ? result.finalH : undefined} onClick={() => computeStep('outputCalc')} small />
 
-      {/* Final h_t output */}
+      {/* === OUTPUT h_t and y_t === */}
       <Line d={`M ${finalMultX + 20} ${gateY} L ${rightX} ${gateY}`} type="data" isActive={steps.outputCalc === 'done'} />
       <IOLabel x={rightX + 10} y={gateY} label="h" subscript="t" value={steps.outputCalc === 'done' ? result.finalH : undefined} align="start" isInput={false} />
 
-      {/* === Y_T OUTPUT (VERTICAL) === */}
+      {/* y_t = h_t (vertical branch up) */}
       <Line 
         d={`M ${finalMultX} ${gateY} L ${finalMultX} 50`} 
         type="data" 
