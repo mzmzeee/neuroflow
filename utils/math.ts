@@ -64,8 +64,9 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
     weightCandidate = []
   } = params;
 
-  // Common concatenation [x, h] for most gates
-  const concatenated = vecConcat(inputX, hiddenH);
+  // Common concatenation [h, x] (Hidden then Input)
+  // User Requirement: "hidden are at the base of the array" -> [h_0, h_1, ..., x_0, x_1]
+  const concatenated = vecConcat(hiddenH, inputX);
 
   if (type === ModelType.UGRNN) {
     // UGRNN Logic
@@ -111,7 +112,8 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
     // Candidate Calculation
     // Apply reset gate to hidden state
     const r_h = vecMult(r_t, hiddenH);
-    const candConcat = vecConcat(inputX, r_h);
+    // User Requirement: "hidden at base" -> [r*h, x]
+    const candConcat = vecConcat(r_h, inputX);
     
     const lin_n = matVecMul(weightCandidate, candConcat);
     const n_t = vecTanh(lin_n, 0); 
