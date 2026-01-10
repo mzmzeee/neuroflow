@@ -10,15 +10,36 @@ const App: React.FC = () => {
   const [timeStep, setTimeStep] = useState(0);
   const [canAdvance, setCanAdvance] = useState(false);
 
+  const createDefaultMatrix = (rows: number, cols: number, diagonalVal: number = 1) => {
+    return Array(rows).fill(0).map((_, r) => 
+      Array(cols).fill(0).map((_, c) => {
+        // Simple identity-like initialization for square sub-matrices
+        // Input part (0 to inputSize-1)
+        if (c < rows && r === c) return diagonalVal; 
+        // Hidden part (inputSize to end)
+        if (c >= rows && (c - rows) === r) return diagonalVal;
+        return 0;
+      })
+    );
+  };
+
+  const defaultVectorSize = 2;
+  const inputSize = defaultVectorSize; // Assuming input dim = hidden dim for now
+  const concatSize = inputSize + defaultVectorSize;
+
   // Initial Vector Size = 2 (matches the user's example)
   const [params, setParams] = useState<SimulationParams>({
-    vectorSize: 2,
+    vectorSize: defaultVectorSize,
     inputX: [1.0, 0.0],
     hiddenH: [0.0, 0.0],
     cellC: [0.0, 0.0],
     biasGate1: 0,
     biasGate2: 0,
-    biasGate3: 0
+    biasGate3: 0,
+    weightGate1: createDefaultMatrix(defaultVectorSize, concatSize, 1),
+    weightGate2: createDefaultMatrix(defaultVectorSize, concatSize, 1),
+    weightGate3: createDefaultMatrix(defaultVectorSize, concatSize, 1),
+    weightCandidate: createDefaultMatrix(defaultVectorSize, concatSize, 1)
   });
 
   const result: SimulationResult = useMemo(() => {
@@ -27,11 +48,18 @@ const App: React.FC = () => {
 
   // Reset when switching tabs
   useEffect(() => {
+    const rows = params.vectorSize;
+    const cols = rows * 2;
+    
     setParams(p => ({
       ...p,
       biasGate1: 0,
       biasGate2: 0,
       biasGate3: 0,
+      weightGate1: createDefaultMatrix(rows, cols, 1),
+      weightGate2: createDefaultMatrix(rows, cols, 1),
+      weightGate3: createDefaultMatrix(rows, cols, 1),
+      weightCandidate: createDefaultMatrix(rows, cols, 1),
       hiddenH: Array(p.vectorSize).fill(0),
       cellC: Array(p.vectorSize).fill(0)
     }));

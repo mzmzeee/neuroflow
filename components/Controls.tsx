@@ -65,6 +65,64 @@ const VectorInput = ({
   );
 };
 
+// Matrix input component
+const MatrixInput = ({
+  label,
+  value,
+  rows,
+  cols,
+  onChange
+}: {
+  label: string;
+  value: number[][];
+  rows: number;
+  cols: number;
+  onChange: (m: number[][]) => void;
+}) => {
+  const handleChange = (r: number, c: number, valStr: string) => {
+    const val = valStr === '' || valStr === '-' ? 0 : parseFloat(valStr);
+    if (!isNaN(val)) {
+      const newMat = value.map(row => [...row]);
+      if (!newMat[r]) newMat[r] = [];
+      newMat[r][c] = val;
+      onChange(newMat);
+    }
+  };
+
+  // Ensure matrix has correct dimensions for rendering
+  const safeValue = Array(rows).fill(0).map((_, r) => 
+    Array(cols).fill(0).map((_, c) => (value[r] && value[r][c] !== undefined) ? value[r][c] : 0)
+  );
+
+  return (
+    <div className="mb-6">
+      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+        {label} <span className="text-[10px] text-slate-600 normal-case">({rows}×{cols})</span>
+      </label>
+      <div className="overflow-x-auto pb-2">
+        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(40px, 1fr))` }}>
+          {safeValue.map((row, r) => (
+            row.map((val, c) => (
+              <div key={`${r}-${c}`} className="relative group">
+                {/* Column/Row indicators for first row/col could go here if needed */}
+                <input
+                  type="number"
+                  step="0.1"
+                  value={val}
+                  onChange={(e) => handleChange(r, c, e.target.value)}
+                  className="w-full bg-slate-800/80 border border-slate-700 rounded px-1 py-1 text-xs font-mono text-center text-white 
+                    focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all"
+                  title={`W[${r},${c}]`}
+                />
+              </div>
+            ))
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Bias slider with better visuals
 const BiasSlider = ({
   label,
@@ -112,19 +170,43 @@ export const Controls: React.FC<ControlsProps> = ({
     onChange({ ...params, [key]: val });
   };
 
+  const updateMatrix = (key: keyof SimulationParams, val: number[][]) => {
+    onChange({ ...params, [key]: val });
+  };
+
   const changeDim = (dim: number) => {
-    const resize = (v: number[]) => {
+    const resizeVec = (v: number[]) => {
       if (v.length === dim) return v;
       if (v.length > dim) return v.slice(0, dim);
       return [...v, ...Array(dim - v.length).fill(0)];
     };
 
+    const resizeMat = (m: number[][], rows: number, cols: number) => {
+      // Create new matrix with target dimensions
+      const newMat = Array(rows).fill(0).map(() => Array(cols).fill(0));
+      
+      // Copy existing values
+      for(let r = 0; r < Math.min(rows, m.length); r++) {
+        for(let c = 0; c < Math.min(cols, m[0]?.length || 0); c++) {
+          newMat[r][c] = m[r][c];
+        }
+      }
+      return newMat;
+    };
+
+    const inputDim = dim; // Currently input size = hidden size
+    const concatDim = inputDim + dim;
+
     onChange({
       ...params,
       vectorSize: dim,
-      inputX: resize(params.inputX),
-      hiddenH: resize(params.hiddenH),
-      cellC: params.cellC ? resize(params.cellC) : Array(dim).fill(0)
+      inputX: resizeVec(params.inputX),
+      hiddenH: resizeVec(params.hiddenH),
+      cellC: params.cellC ? resizeVec(params.cellC) : Array(dim).fill(0),
+      weightGate1: resizeMat(params.weightGate1, dim, concatDim),
+      weightGate2: resizeMat(params.weightGate2, dim, concatDim),
+      weightGate3: resizeMat(params.weightGate3, dim, concatDim),
+      weightCandidate: resizeMat(params.weightCandidate, dim, concatDim),
     });
   };
 
@@ -203,33 +285,76 @@ export const Controls: React.FC<ControlsProps> = ({
         )}
       </div>
 
-      {/* Gate Biases Panel */}
+        {/* Gate Biases Panel */}
       <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl flex-grow">
         <h3 className="text-sm font-bold text-white mb-4">
-          Gate Biases
+          Gate Parameters
         </h3>
 
-        <BiasSlider
-          label={gateLabels[type]?.gate1 || 'Gate 1 Bias'}
-          value={params.biasGate1}
-          onChange={(v) => updateScalar('biasGate1', v)}
-        />
-
-        {type !== 'UGRNN' && (
+        <div className="mb-6 space-y-4">
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Biases</h4>
           <BiasSlider
-            label={gateLabels[type]?.gate2 || 'Gate 2 Bias'}
-            value={params.biasGate2}
-            onChange={(v) => updateScalar('biasGate2', v)}
+            label={gateLabels[type]?.gate1 || 'Gate 1 Bias'}
+            value={params.biasGate1}
+            onChange={(v) => updateScalar('biasGate1', v)}
           />
-        )}
 
-        {type === 'LSTM' && (
-          <BiasSlider
-            label={gateLabels.LSTM.gate3}
-            value={params.biasGate3}
-            onChange={(v) => updateScalar('biasGate3', v)}
+          {type !== 'UGRNN' && (
+            <BiasSlider
+              label={gateLabels[type]?.gate2 || 'Gate 2 Bias'}
+              value={params.biasGate2}
+              onChange={(v) => updateScalar('biasGate2', v)}
+            />
+          )}
+
+          {type === 'LSTM' && (
+            <BiasSlider
+              label={gateLabels.LSTM.gate3}
+              value={params.biasGate3}
+              onChange={(v) => updateScalar('biasGate3', v)}
+            />
+          )}
+        </div>
+
+        <div className="space-y-4 pt-4 border-t border-slate-700">
+           <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Weight Matrices</h4>
+           
+           <MatrixInput
+            label={`${gateLabels[type]?.gate1?.split('(')[0].trim() || 'Gate 1'} Weights`}
+            value={params.weightGate1}
+            rows={params.vectorSize}
+            cols={params.vectorSize * 2}
+            onChange={(m) => updateMatrix('weightGate1', m)}
           />
-        )}
+
+          {type !== 'UGRNN' && (
+             <MatrixInput
+             label={`${gateLabels[type]?.gate2?.split('(')[0].trim() || 'Gate 2'} Weights`}
+             value={params.weightGate2}
+             rows={params.vectorSize}
+             cols={params.vectorSize * 2}
+             onChange={(m) => updateMatrix('weightGate2', m)}
+           />
+          )}
+
+          {type === 'LSTM' && (
+             <MatrixInput
+             label={`${gateLabels.LSTM.gate3.split('(')[0].trim()} Weights`}
+             value={params.weightGate3}
+             rows={params.vectorSize}
+             cols={params.vectorSize * 2}
+             onChange={(m) => updateMatrix('weightGate3', m)}
+           />
+          )}
+
+          <MatrixInput
+             label="Candidate State Weights"
+             value={params.weightCandidate}
+             rows={params.vectorSize}
+             cols={params.vectorSize * 2}
+             onChange={(m) => updateMatrix('weightCandidate', m)}
+           />
+        </div>
       </div>
 
       {/* Action Buttons */}

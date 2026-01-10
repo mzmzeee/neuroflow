@@ -3,6 +3,14 @@ import { SimulationParams, SimulationResult, ModelType } from '../types';
 
 // --- Vector Math Helpers ---
 
+const matVecMul = (matrix: number[][], vector: number[]): number[] => {
+  // M x N matrix dot N vector -> M vector
+  if (!matrix || matrix.length === 0) return [];
+  return matrix.map(row => {
+    return row.reduce((sum, val, i) => sum + val * (vector[i] || 0), 0);
+  });
+};
+
 const vecSigmoid = (v: number[], bias: number): number[] => {
   return v.map(x => 1 / (1 + Math.exp(-(x + bias))));
 };
@@ -36,16 +44,6 @@ const vecConcat = (v1: number[], v2: number[]): number[] => {
   return [...v1, ...v2];
 };
 
-/**
- * Simulates a linear layer W * [x, h] by summing the respective components
- * (Identity weights assumption) to reduce dimension back to hidden size.
- */
-const mockLinear = (concatenated: number[], splitIndex: number): number[] => {
-  const part1 = concatenated.slice(0, splitIndex);
-  const part2 = concatenated.slice(splitIndex);
-  return vecAdd(part1, part2);
-};
-
 // Formatter for vector display
 export const fmtVec = (v: number[] | undefined): string => {
   if (!v) return '';
@@ -53,29 +51,37 @@ export const fmtVec = (v: number[] | undefined): string => {
 };
 
 export const calculateModel = (type: ModelType, params: SimulationParams): SimulationResult => {
-  const { inputX, hiddenH, cellC, biasGate1, biasGate2, biasGate3 } = params;
+  const { 
+    inputX, 
+    hiddenH, 
+    cellC, 
+    biasGate1, 
+    biasGate2, 
+    biasGate3, 
+    weightGate1 = [], 
+    weightGate2 = [], 
+    weightGate3 = [],
+    weightCandidate = []
+  } = params;
 
-  // Ensure all vectors match the requested size (sanity check)
-  // In a real app we'd handle resizing more gracefully in the UI, but math assumes valid inputs.
+  // Common concatenation [x, h] for most gates
+  const concatenated = vecConcat(inputX, hiddenH);
 
   if (type === ModelType.UGRNN) {
     // UGRNN Logic
-    // u = sigmoid(x + h + b_u)
-    // s = tanh(x + h + b_s)
+    // u = sigmoid(W_u * (x + h) + b_u)
+    // s = tanh(W_s * (x + h) + b_s)
     // h_new = u * h_old + (1 - u) * s
     
-    // Step 1: Concatenate inputs
-    const concatenated = vecConcat(inputX, hiddenH);
-    // Step 2: Linear Projection (Simulated via Summation)
-    const sumXH = mockLinear(concatenated, inputX.length);
+    // Gate 1 (Update Gate u)
+    const lin_u = matVecMul(weightGate1, concatenated);
+    const u_t = vecSigmoid(lin_u, biasGate1);
     
-    const u_t = vecSigmoid(sumXH, biasGate1);
-    const s_t = vecTanh(sumXH, 0); // Assuming 0 bias for candidate in this simplified view
+    // Candidate (s)
+    // Note: Typically UGRNN candidate uses [x, h] directly
+    const lin_s = matVecMul(weightCandidate, concatenated);
+    const s_t = vecTanh(lin_s, 0); // Assuming 0 bias for candidate if not provided params
     
-    // Interpolation
-    // Note: The slide often shows (1-u)*s + u*h or similar. 
-    // We follow standard UGRNN/GRU-like interpolation.
-    // h_new = u * h + (1-u) * s
     const h_t = vecMix(u_t, hiddenH, s_t);
 
     return {
@@ -89,34 +95,28 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
   } 
   else if (type === ModelType.GRU) {
     // GRU Logic
-    // r = sigmoid(x + h + b_r)
-    // z = sigmoid(x + h + b_z)
-    // n = tanh(x + (r * h))  <-- Note: r is applied to h before mixing with x
+    // r = sigmoid(W_r * [x, h] + b_r)
+    // z = sigmoid(W_z * [x, h] + b_z)
+    // n = tanh(W_n * [x, r * h] + b_n)
     // h_new = (1 - z) * h + z * n
     
-    // Step 1: Concatenate inputs
-    const concatenated = vecConcat(inputX, hiddenH);
-    // Step 2: Linear Projection (Simulated via Summation)
-    const sumXH = mockLinear(concatenated, inputX.length);
+    // Gate 1 (Reset Gate r)
+    const lin_r = matVecMul(weightGate1, concatenated);
+    const r_t = vecSigmoid(lin_r, biasGate1);
     
-    const r_t = vecSigmoid(sumXH, biasGate1); // Reset
-    const z_t = vecSigmoid(sumXH, biasGate2); // Update
+    // Gate 2 (Update Gate z)
+    const lin_z = matVecMul(weightGate2, concatenated);
+    const z_t = vecSigmoid(lin_z, biasGate2);
     
-    // Candidate calculation
-    // n = tanh(W * [x, r*h])
+    // Candidate Calculation
+    // Apply reset gate to hidden state
     const r_h = vecMult(r_t, hiddenH);
-    
-    // Concat inputs for candidate
     const candConcat = vecConcat(inputX, r_h);
-    // Apply Linear Layer (simulated)
-    const candLinear = mockLinear(candConcat, inputX.length);
     
-    const n_t = vecTanh(candLinear, 0);
-    
+    const lin_n = matVecMul(weightCandidate, candConcat);
+    const n_t = vecTanh(lin_n, 0); 
+
     // Final mix: h_t = (1-z)*h + z*n
-    // Note: The generic vecMix is u*h + (1-u)s. 
-    // If z is Update gate, typically h_new = (1-z)h + z*n.
-    // Let's implement manually to be precise.
     const h_t = hiddenH.map((h, i) => {
       const z = z_t[i];
       const n = n_t[i];
@@ -134,25 +134,30 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
   } 
   else {
     // LSTM Logic
-    // f = sigmoid(x + h + b_f)
-    // i = sigmoid(x + h + b_i)
-    // o = sigmoid(x + h + b_o)
-    // c_tilde = tanh(x + h)
+    // f = sigmoid(W_f * [x, h] + b_f)
+    // i = sigmoid(W_i * [x, h] + b_i)
+    // o = sigmoid(W_o * [x, h] + b_o)
+    // c_tilde = tanh(W_c * [x, h])
     // c_new = f * c_old + i * c_tilde
     // h_new = o * tanh(c_new)
 
-    // Step 1: Concatenate inputs
-    const concatenated = vecConcat(inputX, hiddenH);
-    // Step 2: Linear Projection (Simulated via Summation)
-    const sumXH = mockLinear(concatenated, inputX.length);
+    // Gate 1 (Forget f)
+    const lin_f = matVecMul(weightGate1, concatenated);
+    const f_t = vecSigmoid(lin_f, biasGate1);
+    
+    // Gate 2 (Input i)
+    const lin_i = matVecMul(weightGate2, concatenated);
+    const i_t = vecSigmoid(lin_i, biasGate2);
+    
+    // Gate 3 (Output o)
+    const lin_o = matVecMul(weightGate3, concatenated);
+    const o_t = vecSigmoid(lin_o, biasGate3);
 
-    const f_t = vecSigmoid(sumXH, biasGate1); // Forget
-    const i_t = vecSigmoid(sumXH, biasGate2); // Input
-    const o_t = vecSigmoid(sumXH, biasGate3); // Output
+    // Candidate
+    const lin_c = matVecMul(weightCandidate, concatenated);
+    const c_tilde = vecTanh(lin_c, 0);
 
-    const c_tilde = vecTanh(sumXH, 0);
-
-    const prevC = cellC || Array(inputX.length).fill(0);
+    const prevC = cellC || Array(hiddenH.length).fill(0);
 
     const term1 = vecMult(f_t, prevC);
     const term2 = vecMult(i_t, c_tilde);

@@ -15,6 +15,12 @@ export interface SimulationParams {
   biasGate1: number; 
   biasGate2: number;
   biasGate3: number;
+
+  // Gate Weights (Matrices: [HiddenSize x (InputSize + HiddenSize)])
+  weightGate1: number[][]; // UGRNN: u, GRU: r, LSTM: f
+  weightGate2: number[][]; // GRU: z, LSTM: i
+  weightGate3: number[][]; // LSTM: o
+  weightCandidate: number[][]; // UGRNN: s, GRU: n, LSTM: c
 }
 
 export interface SimulationResult {
