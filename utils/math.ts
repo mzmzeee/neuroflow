@@ -32,6 +32,20 @@ const vecMix = (u: number[], h: number[], s: number[]): number[] => {
   });
 };
 
+const vecConcat = (v1: number[], v2: number[]): number[] => {
+  return [...v1, ...v2];
+};
+
+/**
+ * Simulates a linear layer W * [x, h] by summing the respective components
+ * (Identity weights assumption) to reduce dimension back to hidden size.
+ */
+const mockLinear = (concatenated: number[], splitIndex: number): number[] => {
+  const part1 = concatenated.slice(0, splitIndex);
+  const part2 = concatenated.slice(splitIndex);
+  return vecAdd(part1, part2);
+};
+
 // Formatter for vector display
 export const fmtVec = (v: number[] | undefined): string => {
   if (!v) return '';
@@ -50,7 +64,10 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
     // s = tanh(x + h + b_s)
     // h_new = u * h_old + (1 - u) * s
     
-    const sumXH = vecAdd(inputX, hiddenH);
+    // Step 1: Concatenate inputs
+    const concatenated = vecConcat(inputX, hiddenH);
+    // Step 2: Linear Projection (Simulated via Summation)
+    const sumXH = mockLinear(concatenated, inputX.length);
     
     const u_t = vecSigmoid(sumXH, biasGate1);
     const s_t = vecTanh(sumXH, 0); // Assuming 0 bias for candidate in this simplified view
@@ -66,7 +83,8 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
       gate1: u_t, // Update
       gate2: [],
       gate3: [],
-      candidateState: s_t
+      candidateState: s_t,
+      concatenated: concatenated
     };
   } 
   else if (type === ModelType.GRU) {
@@ -76,15 +94,24 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
     // n = tanh(x + (r * h))  <-- Note: r is applied to h before mixing with x
     // h_new = (1 - z) * h + z * n
     
-    const sumXH = vecAdd(inputX, hiddenH);
+    // Step 1: Concatenate inputs
+    const concatenated = vecConcat(inputX, hiddenH);
+    // Step 2: Linear Projection (Simulated via Summation)
+    const sumXH = mockLinear(concatenated, inputX.length);
     
     const r_t = vecSigmoid(sumXH, biasGate1); // Reset
     const z_t = vecSigmoid(sumXH, biasGate2); // Update
     
     // Candidate calculation
+    // n = tanh(W * [x, r*h])
     const r_h = vecMult(r_t, hiddenH);
-    const sum_x_rh = vecAdd(inputX, r_h);
-    const n_t = vecTanh(sum_x_rh, 0);
+    
+    // Concat inputs for candidate
+    const candConcat = vecConcat(inputX, r_h);
+    // Apply Linear Layer (simulated)
+    const candLinear = mockLinear(candConcat, inputX.length);
+    
+    const n_t = vecTanh(candLinear, 0);
     
     // Final mix: h_t = (1-z)*h + z*n
     // Note: The generic vecMix is u*h + (1-u)s. 
@@ -101,7 +128,8 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
       gate1: r_t, // Reset
       gate2: z_t, // Update
       gate3: [],
-      candidateState: n_t
+      candidateState: n_t,
+      concatenated: concatenated
     };
   } 
   else {
@@ -113,7 +141,10 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
     // c_new = f * c_old + i * c_tilde
     // h_new = o * tanh(c_new)
 
-    const sumXH = vecAdd(inputX, hiddenH);
+    // Step 1: Concatenate inputs
+    const concatenated = vecConcat(inputX, hiddenH);
+    // Step 2: Linear Projection (Simulated via Summation)
+    const sumXH = mockLinear(concatenated, inputX.length);
 
     const f_t = vecSigmoid(sumXH, biasGate1); // Forget
     const i_t = vecSigmoid(sumXH, biasGate2); // Input
@@ -137,7 +168,8 @@ export const calculateModel = (type: ModelType, params: SimulationParams): Simul
       gate2: i_t,
       gate3: o_t,
       candidateState: c_tilde,
-      tanhC: tanh_c
+      tanhC: tanh_c,
+      concatenated: concatenated
     };
   }
 };

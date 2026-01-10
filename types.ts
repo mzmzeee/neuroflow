@@ -29,4 +29,7 @@ export interface SimulationResult {
   // Intermediate Tanh values (-1 to 1)
   candidateState: number[]; 
   tanhC?: number[]; // LSTM specific
+  
+  // Concatenated Input (x_t + h_{t-1})
+  concatenated?: number[];
 }

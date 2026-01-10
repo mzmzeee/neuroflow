@@ -228,7 +228,7 @@ const UGRNNDiagram: React.FC<{
   const sigmaY = 250;
 
   // Derived Data
-  const concatVal = params.inputX.map((v, i) => v + (params.hiddenH[i] || 0));
+  const concatVal = result.concatenated || [];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
@@ -254,7 +254,7 @@ const UGRNNDiagram: React.FC<{
       <Line d={`M ${concatX} 460 L ${concatX} ${bottomY + 20}`} type="data" isActive={steps.concat === 'active'} />
 
       {/* Merge node */}
-      <Node x={concatX} y={bottomY} type="+" label="Merge" state={steps.concat}
+      <Node x={concatX} y={bottomY} type="c" label="Concat" state={steps.concat}
         value={steps.concat === 'done' ? concatVal : undefined} onClick={() => computeStep('concat')} />
 
       {/* Bus Line running right from merge */}
@@ -420,7 +420,7 @@ const GRUDiagram: React.FC<{
   const addX = 1000;
   const rightX = 1100;
 
-  const concatVal = params.inputX.map((v, i) => v + (params.hiddenH[i] || 0));
+  const concatVal = result.concatenated || [];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
@@ -445,7 +445,7 @@ const GRUDiagram: React.FC<{
       <Line d={`M ${concatX} ${topY} L ${concatX} ${bottomY - 20}`} type="data" isActive={steps.concat === 'active'} />
 
       {/* Merge Node */}
-      <Node x={concatX} y={bottomY} type="+" label="Merge" state={steps.concat}
+      <Node x={concatX} y={bottomY} type="c" label="Concat" state={steps.concat}
         value={steps.concat === 'done' ? concatVal : undefined} onClick={() => computeStep('concat')} />
 
       {/* === GATES (Parallel) === */}
@@ -594,7 +594,7 @@ const LSTMDiagram: React.FC<{
   const finalMultX = 940;
   const rightX = W - 150;
 
-  const concatVal = params.inputX.map((v, i) => v + (params.hiddenH[i] || 0));
+  const concatVal = result.concatenated || [];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
@@ -620,7 +620,7 @@ const LSTMDiagram: React.FC<{
       <Line d={`M ${concatX} ${inputY} L ${concatX} ${busY}`} type="data" isActive={steps.concat === 'active'} />
 
       {/* Merge Node */}
-      <Node x={concatX} y={busY} type="+" label="Merge" state={steps.concat}
+      <Node x={concatX} y={busY} type="c" label="Concat" state={steps.concat}
         value={steps.concat === 'done' ? concatVal : undefined} onClick={() => computeStep('concat')} />
 
       {/* === DATA BUS === */}
